@@ -31,7 +31,8 @@ class PrimaryCaps(nn.Module):
     def forward(self, x):
         u = [capsule(x) for capsule in self.capsules]
         u = torch.stack(u, dim=1)
-        u = u.view(x.size(0), self.num_routes, -1)
+        u = u.view(x.size(0), -1, self.num_routes).permute(0, 2, 1)
+        # u = u.view(x.size(0), self.num_routes, -1)
         return self.squash(u)
 
     def squash(self, input_tensor):

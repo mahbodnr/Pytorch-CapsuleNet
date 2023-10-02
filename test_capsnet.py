@@ -4,9 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision import datasets, transforms
-from capsnet import CapsNet
+# from capsnet import CapsNet
+from capsnnmf import CapsNet
 from data_loader import Dataset
 from tqdm import tqdm
+from optimizer import Madam
 
 USE_CUDA = True if torch.cuda.is_available() else False
 BATCH_SIZE = 100
@@ -141,7 +143,28 @@ if __name__ == '__main__':
         capsule_net = capsule_net.cuda()
     capsule_net = capsule_net.module
 
-    optimizer = torch.optim.Adam(capsule_net.parameters())
+    nnmf_params = []
+    other_params = []
+    for name, param in capsule_net.named_parameters():
+        if "nnmf" in name.lower():
+            nnmf_params.append(param)
+        else:
+            other_params.append(param)
+    print(
+        f"NNMF parameters: {len(nnmf_params)}\nOther parameters: {len(other_params)}"
+    )
+    optimizer = Madam(
+        params=[
+            {"params": other_params, "lr": 0.001},
+            {
+                "params": nnmf_params,
+                "lr": 0.01,
+                "nnmf": True,
+                "foreach": False,
+            },
+        ],
+    )
+    # optimizer = torch.optim.Adam(capsule_net.parameters())
 
     for e in range(1, N_EPOCHS + 1):
         train(capsule_net, optimizer, mnist.train_loader, e)
